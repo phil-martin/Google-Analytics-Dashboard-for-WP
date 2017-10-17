@@ -22,7 +22,7 @@ jQuery( window ).on( 'load', function () {
         return fn;
     }
     
-	function processRedirectClick(e, target, urlToRedirectTo, category, action, label) {
+	function processLinkClick(e, target, urlToRedirectTo, category, action, label) {
 	
 		var useHitCallback = target != '_blank' && gadwpUAEventsData.options[ 'event_precision' ];
 		var useNonInteraction = !!gadwpUAEventsData.options[ 'event_bouncerate' ]
@@ -105,7 +105,7 @@ jQuery( window ).on( 'load', function () {
 				}
 			} ).click( function ( e ) {
 
-				return processRedirectClick(
+				return processLinkClick(
 					e,
 					this.target,
 					this.href,
@@ -127,7 +127,7 @@ jQuery( window ).on( 'load', function () {
 			}
 		} ).click( function (e) {
 		
-			return processRedirectClick(
+			return processLinkClick(
 				e,
 				this.target,
 				this.href,
