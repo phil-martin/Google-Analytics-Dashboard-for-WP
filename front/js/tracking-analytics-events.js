@@ -8,24 +8,45 @@
 
 "use strict";
 
-var gadwpRedirectLink;
-var gadwpRedirectCalled = false;
-var gadwpDefaultPrevented = false;
-
-function gadwpRedirect () {
-	if ( gadwpRedirectCalled ) {
-		return;
-	}
-	gadwpRedirectCalled = true;
-	if ( gadwpDefaultPrevented == false ) {
-		document.location.href = gadwpRedirectLink;
-	} else {
-		gadwpDefaultPrevented = false;
-	}
-}
-
 jQuery( window ).on( 'load', function () {
 
+    function createSingleCallFunctionWithTimeout(callback, opt_timeout) {
+        var called = false;
+        function fn() {
+            if (!called) {
+                called = true;
+                callback();
+            }
+        }
+        setTimeout(fn, Math.max(1000, opt_timeout || 1000));
+        return fn;
+    }
+    
+	function processRedirectClick(e, target, urlToRedirectTo, category, action, label) {
+	
+		var useHitCallback = target != '_blank' && gadwpUAEventsData.options[ 'event_precision' ];
+		var useNonInteraction = !!gadwpUAEventsData.options[ 'event_bouncerate' ]
+	
+		var gaArgs = {};
+	
+		if (useNonInteraction) {
+			gaArgs.nonInteraction = 1;
+		}
+		if (useHitCallback) {
+			e.preventDefault();
+			
+			gaArgs.hitCallback = createSingleCallFunctionWithTimeout(function () {
+				document.location.href = urlToRedirectTo;
+			}, gadwpUAEventsData.options['event_timeout'])
+		}
+	
+		ga( 'send', 'event', category, action, label, gaArgs);
+	
+		if (useHitCallback) {
+			return false;
+		}
+	}
+	
 	if ( gadwpUAEventsData.options[ 'event_tracking' ] ) {
 		// Track Downloads
 		jQuery( 'a' ).filter( function () {
@@ -83,42 +104,15 @@ jQuery( window ).on( 'load', function () {
 						return this.href;
 				}
 			} ).click( function ( e ) {
-				gadwpRedirectCalled = false;
-				gadwpRedirectLink = this.href;
-				var category = this.getAttribute( 'data-vars-ga-category' ) || 'outbound';
-				var action = this.getAttribute( 'data-vars-ga-action' ) || 'click';
-				var label = this.getAttribute( 'data-vars-ga-label' ) || this.href;
-				if ( this.target != '_blank' && gadwpUAEventsData.options[ 'event_precision' ] ) {
-					if ( e.isDefaultPrevented() ) {
-						gadwpDefaultPrevented = true;
-						gadwpRedirectCalled = false;						
-					}
-				} else {
-					gadwpRedirectCalled = true;
-					gadwpDefaultPrevented = false;
-				}
-				if ( this.target != '_blank' && gadwpUAEventsData.options[ 'event_precision' ] ) {
-					if ( gadwpUAEventsData.options[ 'event_bouncerate' ] ) {
-						ga( 'send', 'event', category, action, label, {
-							'nonInteraction' : 1,
-							'hitCallback' : gadwpRedirect
-						} );
-					} else {
-						ga( 'send', 'event', category, action, label, {
-							'hitCallback' : gadwpRedirect
-						} );
-					}					
-					setTimeout( gadwpRedirect, gadwpUAEventsData.options[ 'event_timeout' ] );
-					return false;
-				} else {
-					if ( gadwpUAEventsData.options[ 'event_bouncerate' ] ) {
-						ga( 'send', 'event', category, action, label, {
-							'nonInteraction' : 1
-						} );
-					} else {
-						ga( 'send', 'event', category, action, label );
-					}					
-				}
+
+				return processRedirectClick(
+					e,
+					this.target,
+					this.href,
+					this.getAttribute( 'data-vars-ga-category' ) || 'outbound',
+					this.getAttribute( 'data-vars-ga-action' ) || 'click',
+					this.getAttribute( 'data-vars-ga-label' ) || this.href);
+	
 			} );
 		}
 	}
@@ -131,43 +125,16 @@ jQuery( window ).on( 'load', function () {
 				var reg = new RegExp( '(' + gadwpUAEventsData.options[ 'event_affiliates' ].replace( /\//g, '\/' ) + ')' );
 				return this.href.match( reg );
 			}
-		} ).click( function ( event ) {
-			gadwpRedirectCalled = false;
-			gadwpRedirectLink = this.href;
-			var category = this.getAttribute( 'data-vars-ga-category' ) || 'affiliates';
-			var action = this.getAttribute( 'data-vars-ga-action' ) || 'click';
-			var label = this.getAttribute( 'data-vars-ga-label' ) || this.href;
-			if ( this.target != '_blank' && gadwpUAEventsData.options[ 'event_precision' ] ) {
-				if ( e.isDefaultPrevented() ) {
-					gadwpDefaultPrevented = true;
-					gadwpRedirectCalled = false;
-				}
-			} else {
-				gadwpRedirectCalled = true;
-				gadwpDefaultPrevented = false;
-			}			
-			if ( this.target != '_blank' && gadwpUAEventsData.options[ 'event_precision' ] ) {
-				if ( gadwpUAEventsData.options[ 'event_bouncerate' ] ) {
-					ga( 'send', 'event', category, action, label, {
-						'nonInteraction' : 1,
-						'hitCallback' : gadwpRedirect
-					} );
-				} else {
-					ga( 'send', 'event', category, action, label, {
-						'hitCallback' : gadwpRedirect
-					} );
-				}				
-				setTimeout( gadwpRedirect, gadwpUAEventsData.options[ 'event_timeout' ] );
-				return false;
-			} else {
-				if ( gadwpUAEventsData.options[ 'event_bouncerate' ] ) {
-					ga( 'send', 'event', category, action, label, {
-						'nonInteraction' : 1
-					} );
-				} else {
-					ga( 'send', 'event', category, action, label );
-				}					
-			}
+		} ).click( function (e) {
+		
+			return processRedirectClick(
+				e,
+				this.target,
+				this.href,
+				this.getAttribute( 'data-vars-ga-category' ) || 'affiliates',
+				this.getAttribute( 'data-vars-ga-action' ) || 'click',
+				this.getAttribute( 'data-vars-ga-label' ) || this.href);
+
 		} );
 	}
 
